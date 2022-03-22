@@ -1,0 +1,32 @@
+input,column,details
+species_meta_traits,species,the three-letter code we used for each species
+species_meta_traits,english,english name
+species_meta_traits,french,french name (mix of offical and local use)
+species_meta_traits,kota,kota name
+species_meta_traits,fang,fang name
+species_meta_traits,scientific,latin species name
+species_meta_traits,family,"cats, bovids, etc."
+species_meta_traits,order,"primate, carnivore, even-toed ungulates, etc."
+species_meta_traits,class,"either bird, mammal, or reptile"
+species_meta_traits,protection,Gabonese legal status as of 22.08.20
+species_meta_traits,IUCN,IUCN status as of 22.08.20
+species_meta_traits,strata_phase1,"unsure if we made this up during phase 1 of the project, or from EltonTraits 1.0, or a combination"
+species_meta_traits,diet_inv,from EltonTraits 1.0 
+species_meta_traits,diet_vend,from EltonTraits 1.0 
+species_meta_traits,diet_vect,from EltonTraits 1.0
+species_meta_traits,diet_vfish,from EltonTraits 1.0
+species_meta_traits,diet_vunk,from EltonTraits 1.0
+species_meta_traits,diet_scav,from EltonTraits 1.0
+species_meta_traits,diet_fruit,from EltonTraits 1.0
+species_meta_traits,diet_nect,from EltonTraits 1.0
+species_meta_traits,diet_seed,from EltonTraits 1.0
+species_meta_traits,diet_planto,from EltonTraits 1.0
+species_meta_traits,forstrat_value,from EltonTraits 1.0
+species_meta_traits,activity_nocturnal,from EltonTraits 1.0
+species_meta_traits,activity_crepuscular,from EltonTraits 1.0
+species_meta_traits,activity_diurnal,from EltonTraits 1.0
+species_meta_traits,bodymass_kg,from EltonTraits 1.0
+species_meta_traits,carto_meanmass_kg,mean kg from our cartography data
+species_meta_traits,carto_mass_n,number of each species weighed to give mean from cartography data
+species_meta_traits,traits_notes,notes of traits
+species_meta_traits,ID_notes,notes on species identification

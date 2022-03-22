@@ -1,0 +1,14 @@
+village,data,warning,action,note
+C8,all bushmeat sessions,paraecologist potentially not reliable, throw out (already done),
+C2,bushmeat transect sessions 1 and 2,paraecologist not reliable, throw out (already done),
+E4,bushmeat transect sessions <= 12,paraecologist not reliable, throw out (already done),
+E4,cartography sessions <=8,"sessions 7 and 8 absent during change of paraecologist, sessions <= 6 unreliable, throw out responses and huntmeat (already done)",,
+E10,bushmeat transect sessions <= 12,people potentially hiding bushmeat, throw out (already done),
+E10,cartography sessions <= 12,participating hunters not showing any bushmeat, throw out responses and huntmeat (already done),
+E2,all cartography,"hunters didn't participate in good faith; very little data and potentially unreliable, throw out (already done)",throw out (already done),
+E9,cartography session 1,"pilot, don't use in final analysis", throw out (already done),
+all,cartography session 15,"cut short from covid, don't use in main analyses, rather for testing simulations", throw out (already done),
+E6,E3,E5, throw out (already done),"when species == ""POT"" & state == ""MI"", double check price with each paraecologist to see if they noted price globally or per half"
+all,bushmeat session 15,"cut short from covid, don't use in main analyses, rather for testing simulations", throw out (already done),
+E1,hunter_responses hunt == E1_H10_s8_p1,no datasheet was filled out, cut from .rds  and .csvs hunter responses and gps data ,
+E8,hunter responses hunt == E8_H02_s9_p1,"first of many parties that session, he check no traps had no bullets and laid 10 traps, thus a hunt but with neither hunt/trap",,

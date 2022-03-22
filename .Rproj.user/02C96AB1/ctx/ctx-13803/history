@@ -1,0 +1,512 @@
+d<-c(); b <- c()
+for(i in 1:nrow(dist_data)){
+d[i] <- with(dist_data, distm(c(long[i], lat[i]),
+c(long.1[i], lat.1[i]), fun = distHaversine))
+b[i] <- with(dist_data, bearing(c(long[i], lat[i]),
+c(long.1[i], lat.1[i])))
+}
+data1$dist_john <- c(0,d)
+data1$bearing <- c(0, b)
+data1
+}
+dc <- list()
+di <- lapply(1:length(names_hunts),
+function(x){dc[[x]] = dist_calc(name = names_hunts[x])})
+all_hunts <- as_tibble(do.call("rbind", di))
+##iGotU had already given us distance moved (rounded to 2 decimal places)..
+#they are virtually identical to John's calculation, which is reassuring!
+identical(round(all_hunts$distance,2),
+round(all_hunts$dist_john,2))
+head(data.frame(all_hunts$distance,all_hunts$dist_john))
+#make a speed column to flag erroneous points
+#pretty sure km/hour (below see divisions by 1000 for meters, 60 for minutes)
+#IGotU comes with a speed column, but I've no idea in what units or if accurate
+##there are negative speeds: IS THIS VELOCITY??!?!
+all_hunts$speed_john <- (all_hunts$dist_john/1000)/(all_hunts$timediff/60)
+#891 NAs: you can't have a speed your first ping, and there are 892 hunts..
+all_hunts %>%
+filter(is.na(speed_john))
+# Check for weirdly fast speeds
+#filter them at, say, 5 km/h...arbitrary but not likely to walk faster than this
+#there are 630 lines with > 5 km/h speed
+#there are 1071 lines with > 4.5 km/h speed, showing how arbitrary this cutoff is...
+#...more thought here would be good..
+#PS fun note the elephant GPS collars had an autofilter at 7 km/h..
+summary(all_hunts$speed_john)
+#sort(all_hunts$speed_john, decreasing = TRUE)
+all_hunts %>%
+filter(speed_john > 5)
+all_hunts %>%
+filter(speed_john > 4.5)
+#for now (17.08.20), limit speeds at 5 km/h
+#note this removes some hunts from 2 to 1 point
+all_hunts <- all_hunts %>%
+filter(speed_john <= 5)
+summary(all_hunts$speed_john)
+#note this reduces our 'good' hunts by 1, from 892 to 891
+#^remember now we were starting with 891 hunts in database
+length(unique(all_hunts$hunt))
+length(unique(hunts_list_good$hunt))
+#a hunt with only 2 points is that which got cut
+hunts_list_good %>%
+filter(hunt %ni% unique(all_hunts$hunt))
+#adjust 'good' list accordingly
+hunts_list_good  <- hunts_list_good %>%
+filter(hunt %in% unique(all_hunts$hunt))
+#check again for outliers
+#all seems well (though some slightly floating points... did points of hunters...
+#...walking very fast (i.e., slightly over 5 km/h) to get there get thrown out??)
+plot(all_hunts$longitude,all_hunts$latitude, asp=1, las=1)
+#create the empty dataframe
+#that the MPCs (minimum convex polygon) & KDEs (kernel density estimates)...
+#..are ways to estimate the area of the area
+#...however (at least in the package I use below) they can't be estimated with < 5 points
+#I comment out the code below, as future cleaning of the hunts
+#..(either simply throwing out the short/poor quality ones)
+hunts_summary <- tibble(hunt=unique(all_hunts$hunt),hunter=NA, village=NA,
+n_points = NA, mean_timediff = NA,
+total_km_walked=NA,
+max_km_village = NA, mean_km_village = NA,
+fin_km_village = NA, start_fin_diff_km = NA)
+###put hunter as character to make the for loop fill out
+#remember later you change it to factor for color purposes in leaflet
+all_hunts$hunter <- as.character(all_hunts$hunter)
+all_hunts$hunt <- as.character(all_hunts$hunt)
+village_meta$village <- as.character(village_meta$village)
+all_hunts$village <- as.character(all_hunts$village)
+#for loop to fill in the summary table
+#i <- 1
+for(i in 1:length(unique(all_hunts$hunt)))
+{
+# Subset the data for that hunt
+tmp <- subset(all_hunts, hunt==hunts_summary$hunt[i])
+#put in the first hunter code for each hunt, because this doesn't change....
+hunts_summary$hunter[i] <- tmp$hunter[1]
+#put in the first village code for each hunt, because this doesn't change....
+hunts_summary$village[i] <- tmp$village[1]
+##add up the number of pings per hunt
+hunts_summary$n_points[i] <- nrow(tmp)
+##mean time diff
+hunts_summary$mean_timediff[i] <- mean(tmp$timediff, na.rm = T)
+# Add up the total distance travelled
+# /1000 to put meters into km
+hunts_summary$total_km_walked[i] <- round(sum(tmp$dist_john),1)/1000
+# set up the spatial dataframe and change to UTM
+tmp_sp <- data.frame(as.character(tmp$hunt))
+coordinates(tmp_sp) <- tmp[,c("longitude", "latitude")]
+proj4string(tmp_sp) <- CRS('+init=epsg:4326')  ## WGS 84 code
+tmp_sp <- spTransform(tmp_sp, CRS('+init=epsg:32633')) # Covert to UTM 33N for MCPs & KDEs
+# Import village coords and change to UTM
+tmp_v <- village_meta[village_meta$village==tmp$village[1],]
+coordinates(tmp_v) <- tmp_v[,c("longitude", "latitude")]
+proj4string(tmp_v) <- CRS('+init=epsg:4326')
+tmp_v <- spTransform(tmp_v, CRS('+init=epsg:32633'))
+# set up the spatial dataframe for THE LAST POINT EACH HUNT and change to UTM
+tmp_fin <- slice_tail(tmp)
+tmp_fin <- data.frame(as.character(tmp_fin$hunt))
+coordinates(tmp_fin) <- slice_tail(tmp)[,c("longitude", "latitude")]
+proj4string(tmp_fin) <- CRS('+init=epsg:4326')  ## WGS 84 code
+tmp_fin <- spTransform(tmp_fin, CRS('+init=epsg:32633'))  # Covert to UTM 33N
+# set up the spatial dataframe FOR THE FIRST POINT EACH HUNT and change to UTM
+tmp_start <- slice_head(tmp)
+tmp_start <- data.frame(as.character(tmp_start$hunt))
+coordinates(tmp_start) <- slice_head(tmp)[,c("longitude", "latitude")]
+proj4string(tmp_start) <- CRS('+init=epsg:4326')  ## WGS 84 code
+tmp_start <- spTransform(tmp_start, CRS('+init=epsg:32633')) # Covert to UTM 33N
+#here we get the point distances from THEIR village in km
+hunts_summary$max_km_village[i] <- max(pointDistance(tmp_v, tmp_sp))/1000
+hunts_summary$mean_km_village[i] <- mean(pointDistance(tmp_v, tmp_sp))/1000
+#how close is the final point to THEIR village in km? (QC)
+#and how close to their first point? (QC)
+hunts_summary$fin_km_village[i] <- pointDistance(tmp_v, tmp_fin)/1000
+hunts_summary$start_fin_diff_km[i] <- pointDistance(tmp_start, tmp_fin)/1000
+}
+##add times last point
+#this doesn't work with for loops
+#https://stackoverflow.com/questions/8857287/how-to-add-subtract-time-from-a-posixlt-time-while-keeping-its-class-in-r
+gps_depart <- all_hunts %>%
+group_by(hunt) %>%
+slice_head() %>%
+select(hunt,
+gps_time_depart = datetime) %>%
+ungroup() %>%
+mutate_if(is.character,funs(factor(.)))
+gps_return <- all_hunts %>%
+group_by(hunt) %>%
+slice_tail() %>%
+select(hunt,
+gps_time_return = datetime) %>%
+ungroup() %>%
+mutate_if(is.character,funs(factor(.)))
+gps_times <- left_join(gps_depart, gps_return) %>%
+mutate(gps_hours = as.numeric((gps_time_return - gps_time_depart)/(60*60)))
+hunts_summary <- left_join(hunts_summary,gps_times) %>%
+select(hunt,hunter,village,
+n_points,mean_timediff,
+gps_time_depart,gps_time_return,
+gps_hours, everything())
+###NOW WITH HUNTS OF > 5 GPS POINTS calculate area
+#CB Clean out the old shapefiles so you can put the new ones in!
+#if you are doing this iteratively over time
+# do.call(file.remove, list(list.files("outputs//mcp100", full.names = TRUE)))
+# do.call(file.remove, list(list.files("outputs//kde50", full.names = TRUE)))
+#first keep only the hunts with > 5 points
+#otherwise neither kde nor (I think) mcp work
+##note that KDE's of 95% very often have grid/extent errors
+#thus I just do 50% (main area hunted)
+#I think in terms of prediction this is also less correlated with km walked
+hunts_more4 <- (all_hunts %>%
+group_by(hunt) %>%
+summarize(n_points = n()) %>%
+filter(n_points > 4))$hunt
+all_hunts_more4 <- all_hunts %>%
+filter(hunt %in% hunts_more4)
+#cut problem hunts
+#E4_H12_s12_p4 gives problems...why?
+bug_hunts <- c("E4_H12_s12_p4",
+"E5_H12_s11_p2")
+all_hunts_more4 %>%
+filter(hunt %in% bug_hunts)
+hunts_more4 <- as_tibble(hunts_more4) %>%
+filter(value %ni% bug_hunts) %>%
+pull(value)
+all_hunts_more4 <- all_hunts_more4 %>%
+filter(hunt %ni% bug_hunts)
+#make your empty table
+hunts_area <- tibble(hunt= hunts_more4,
+mcp100 =NA, kde50=NA)
+#loop through (this takes ~20 minutes)
+for(i in 1:length(hunts_more4)) {
+#to debug
+print(hunts_area$hunt[i])
+# Subset the data for that hunt
+tmp <- subset(all_hunts_more4, hunt==hunts_area$hunt[i])
+# set up the spatial dataframe and change to UTM for MCPs & KDEs
+tmp_sp <- data.frame(as.character(tmp$hunt))
+coordinates(tmp_sp) <- tmp[,c("longitude", "latitude")]
+proj4string(tmp_sp) <- CRS('+init=epsg:4326')  ## WGS 84 code
+tmp_sp <- spTransform(tmp_sp, CRS('+init=epsg:32633')) # Covert to UTM 33N
+#BELOW CALCULATE MCPs AND KDEs FOR INDIVIDUAL HUNTS
+#comment in/out to save/not .shp
+##MCP are will be in km2
+##CB cp stands for Chris Poo....convex polygon
+cp <- mcp(tmp_sp, percent=100, unin=c("m"), unout=c("km2"))
+hunts_area$mcp100[i] <- cp$area
+#cp <- st_as_sf(cp) # Convert to sf
+#write_sf(cp, paste0("outputs//mcp100//",hunts_summary$hunt[i],".shp")) #to save
+#Then KDE preparatory framework
+#extent 1.5 grid 500 gives error when using 95% kde
+kd <- kernelUD(tmp_sp, h="href", extent = 1.5*4, grid= 500, same4all=FALSE)
+## Make a 50% KDE the area in km2
+kdHR50 <- getverticeshr(kd, percent=50, unin= "m", unout="km2")
+hunts_area$kde50[i] <- kdHR50$area
+#kdHR50 <- st_as_sf(kdHR50) # Convert to sf
+#write_sf(kdHR50, paste0("outputs//kde50//",hunts_summary$hunt[i],".shp"))
+plot(cp)
+plot(kdHR50, add = TRUE )
+}
+###join the area hunted to the summary
+hunts_summary_noarea <- hunts_summary
+hunts_summary <- left_join(hunts_summary, hunts_area)
+#change characters back to factor
+#doing this above and below is lazy and should be done with less waste
+all_hunts$hunter <- as.factor(all_hunts$hunter)
+all_hunts$hunt <- as.factor(all_hunts$hunt)
+village_meta$village <- as.factor(village_meta$village)
+all_hunts$village <- as.factor(all_hunts$village)
+##flesh out the summary with joins to exisiting data and/or deriving new columns
+#e.g., sessions, months, times, duration of hunt (two sources to compare: both the GPS
+#and that which hunter stated in the hunter response data...for now (20.09.20)...
+#...I don't bother sourcing from the GPS)...
+#I also add a ration with can serve as a rough rule of thumb on GPS signal quality...
+#as we'd expect the total distance walked should be >= 2x the distance from the village
+#note joins change things back to character so correct for that
+hunts_summary$ratio_walk <- hunts_summary$total_km_walked/
+hunts_summary$max_km_village
+#don't bother with this for now
+# hunts_summary <- left_join(hunts_summary, hunts_list_good) %>%
+#   mutate_if(is.character,funs(factor(.)))
+# hunts_summary$notes <- as.character(hunts_summary$notes)
+#but you could join just the gps
+hunts_summary <- left_join(hunts_summary, (hunts_list_good %>%
+select(hunt,gps))) %>%
+mutate_if(is.character,funs(factor(.)))
+#108 hunts WITHOUT spatial data; that's expected and OK (GPS failure)
+hunter_responses %>%
+filter(hunt %ni%  hunts_summary$hunt)
+#BUT why are there hunts we have summaries for that we don't have responses for?!?
+###OHHH BECAUSE ABOVE I COMMENT OUT THE E4/E10 FILTER SAYING ONLY INTERESTED IN SPATIAL
+table(is.na(hunter_responses$start_date))
+table(is.na(hunter_responses$end_date))
+hunts_summary %>%
+filter(hunt %ni%  hunter_responses$hunt)
+#so keep only the hunts we have reliable responses for
+#so we have 912 responses, for which we have 804 with spatial data (108 failures)
+hunts_summary  <- hunts_summary %>%
+filter(hunt %in%  hunter_responses$hunt)
+##add spatial-temporal info from responses
+#add nightday as behaviour or spacetime? it IS a temporal decision
+# hunter_responses %>%
+#   mutate(time_depart = hms(time_depart)),
+#          time_return = hms(time_return))
+#
+# hunts_summary %>%
+#   mutate(gps_time_depart = hms(format(gps_time_depart, format = "%H:%M:%S")))
+hunts_summary %>%
+mutate(lub = as.numeric(as.duration(interval(gps_time_depart,gps_time_return))),
+lub2 = as.duration(interval(gps_time_depart,gps_time_return)),
+lub3 = as.numeric(gps_time_depart - gps_time_return)/(60*60)) %>%
+select(hunt,lub,lub2,lub3,everything())
+pee4 <- hunts_summary$gps_time_depart
+pee5 <- force_tz(hunts_summary$gps_time_depart, tzone = "Africa/Libreville")
+attr(pee4, "tzone") <- "Africa/Libreville"
+tail(pee4)
+tail(hunts_summary$gps_time_depart)
+tail(pee5)
+###force all your times to WAT!!!!
+hunts_summary$gps_time_depart <- force_tz(hunts_summary$gps_time_depart, tzone = "Africa/Libreville")
+hunts_summary$gps_time_return <- force_tz(hunts_summary$gps_time_return, tzone = "Africa/Libreville")
+hunter_responses$start_datetime <- force_tz(hunter_responses$start_datetime, tzone = "Africa/Libreville")
+hunter_responses$end_datetime <- force_tz(hunter_responses$end_datetime, tzone = "Africa/Libreville")
+hunts_spacetime_all <- left_join(hunts_summary,
+(hunter_responses %>% select(hunt,session,partie, #hunter & village in hunts_summary
+start_date,time_depart,start_datetime,
+end_date,time_return,end_datetime,
+n_days,n_nights,
+duration,max_km,
+nightday,side_road,local_name_area)),
+by = "hunt") %>%
+mutate_if(is.character,funs(factor(.))) %>%
+mutate(village = fct_relevel(droplevels(village),
+village_levels),
+month = month(start_date),
+noted_time_depart = start_datetime,
+diff_depart_hours = as.numeric(as.duration(interval(gps_time_depart,noted_time_depart)))/(60*60),
+#diff_depart_hours = as.duration(interval(noted_time_depart,gps_time_depart)),
+noted_time_return = end_datetime,
+diff_time_return = difftime(gps_time_return,noted_time_return),
+diff_return_hours = as.numeric(as.duration(interval(gps_time_return,noted_time_return)))/(60*60),
+noted_hours = duration,
+diff_hours = gps_hours - noted_hours,
+thought_km_village = max_km,
+diff_km_village = max_km_village - max_km) %>%
+select(hunt,hunter,village, session,partie,
+start_date,end_date,month,
+gps,n_points,mean_timediff,
+n_days,n_nights,nightday,
+noted_time_depart,gps_time_depart,diff_depart_hours,
+noted_time_return,gps_time_return,diff_return_hours,
+noted_hours,gps_hours,diff_hours,
+total_km_walked,mean_km_village,
+max_km_village,thought_km_village,diff_km_village,
+fin_km_village,start_fin_diff_km,ratio_walk,
+mcp100,kde50,
+side_road,local_name_area)
+##check dates ok
+table(is.na(hunts_spacetime_all$start_date))
+table(is.na(hunts_spacetime_all$end_date))
+class(hunts_spacetime_all$start_date)
+class(hunts_spacetime_all$end_date)
+min(hunts_spacetime_all$start_date, na.rm = TRUE)
+max(hunts_spacetime_all$start_date, na.rm = TRUE)
+min(hunts_spacetime_all$end_date, na.rm = TRUE)
+max(hunts_spacetime_all$end_date, na.rm = TRUE)
+##~35% percentage of hunts have a 'good' ratio of total distance...
+nrow(hunts_spacetime_all %>%
+filter(ratio_walk  > 2))/nrow(hunts_spacetime_all )*100
+#ON REFLECTION DON'T SAVE THIS COMBINED 'ALL' DATA FORM AS ALWAYS WILL MODEL GUN & TRAP DIFFERENTLY
+# saveRDS(hunts_spacetime_all, "./inputs/cartography/derived/spacetime_all.rds")
+# write_csv(hunts_spacetime_all, "./inputs/cartography/derived/spacetime_all.csv")
+##split into guns & traps
+names_gun_hunts <- hunter_responses %>%
+filter(guntrap %in% c("gun", "both")) %>%
+pull(hunt) %>%
+droplevels()
+names_trap_hunts <- hunter_responses %>%
+filter(guntrap %in% c("trap", "both")) %>%
+pull(hunt) %>%
+droplevels()
+spacetime_gun <- hunts_spacetime_all %>%
+filter(hunt %in% names_gun_hunts)
+spacetime_trap <- hunts_spacetime_all %>%
+filter(hunt %in% names_trap_hunts)
+# saveRDS(spacetime_gun, "./inputs/cartography/derived/spacetime_gun.rds")
+# write_csv(spacetime_gun, "./inputs/cartography/derived/spacetime_gun.csv")
+#
+# saveRDS(spacetime_trap, "./inputs/cartography/derived/spacetime_trap.rds")
+# write_csv(spacetime_trap, "./inputs/cartography/derived/spacetime_trap.csv")
+###Save the behavioural data in the hunter_responses
+behave_all <- hunter_responses %>% select(-entered,-start_date,-time_depart,-start_datetime,
+-end_date,-time_return,-end_datetime,
+-duration,-max_km,-gps,
+-n_days,-n_nights,-nightday,-side_road,-local_name_area,
+#below remove non-spatial non-behavioural stuff
+-command_details,-camp_details,-roads_details,
+-smalls_details,-notes,-why_area_raw,
+-animals_gun,-animals_gun_details,
+-animals_traps, -animals_traps_details,
+-problems_gps, -weather_raw,
+-local_name_area_raw,
+-forest_village) %>%
+mutate(spatial_data = factor(case_when(hunt %in% hunts_spacetime_all$hunt  ~ "yes",
+hunt %ni% hunts_spacetime_all$hunt  ~ "no",
+TRUE ~ "unknown")))
+behave_gun <- behave_all %>%
+filter(hunt %in% names_gun_hunts)
+behave_trap <- behave_all %>%
+filter(hunt %in% names_trap_hunts)
+# saveRDS(behave_gun, "./inputs/cartography/derived/behave_gun.rds")
+# write_csv(behave_gun, "./inputs/cartography/derived/behave_gun.csv")
+#
+# saveRDS(behave_trap, "./inputs/cartography/derived/behave_trap.rds")
+# write_csv(behave_trap, "./inputs/cartography/derived/behave_trap.csv")
+###JOIN THE THREE TABLES TOGETHER
+###here I bring in huntmeat data
+#I normally ALWAYS import all data at top of script
+#but here wanted to make clear only space it's used
+#MAKE SURE BEHAVIOUR FIRST TO RETAIN ALL ROWS
+offtake_gun <- readRDS("./inputs/cartography/derived/offtake_gun.rds")
+offtake_trap <- readRDS("./inputs/cartography/derived/offtake_trap.rds")
+tmp_lj_gun <- left_join(behave_gun, spacetime_gun)
+bayes_hunts_imputs_gun <- left_join(tmp_lj_gun, offtake_gun)
+tmp_lj_trap <- left_join(behave_trap, spacetime_trap)
+bayes_hunts_imputs_trap <- left_join(tmp_lj_trap, offtake_trap)
+# saveRDS(bayes_hunts_imputs_gun, "./inputs/cartography/derived/bayes_hunts_inputs_gun.rds")
+# write_csv(bayes_hunts_imputs_gun, "./inputs/cartography/derived/bayes_hunts_inputs_gun.csv")
+#
+# saveRDS(bayes_hunts_imputs_trap, "./inputs/cartography/derived/bayes_hunts_inputs_trap.rds")
+# write_csv(bayes_hunts_imputs_trap, "./inputs/cartography/derived/bayes_hunts_inputs_trap.csv")
+study_villages_sf <- st_as_sf(x = village_meta,
+coords = c("longitude", "latitude"),
+crs = 4326)
+carto_villages <- study_villages_sf %>%
+filter(village %in% all_hunts$village)
+hunts_lines <- all_hunts %>%
+st_as_sf(coords = c("longitude", "latitude"), agr = "constant") %>%
+group_by(hunt) %>%
+summarise(do_union = FALSE) %>%
+st_cast("LINESTRING")
+#set the coordinate system, which is wgs1984
+st_crs(hunts_lines) <- 4326
+hunts_lines
+hunts_data <- readRDS("./inputs/cartography/derived/bayes_hunts_inputs_all.rds")
+hdtj <- hunts_data %>%
+select(hunt,village,hunter,session,partie,
+guntrap,why_hunt,local_name_area,
+nightday,max_km_village,
+total_ammo_brought,
+traps_checked,traps_days,
+offtake,kg,money,IUCN,protected,
+ratio_walk)
+hunts_lines <- left_join(hunts_lines, hdtj) %>%
+mutate_if(is.character,funs(factor(.)))
+hunts_lines
+all_hunts
+all_hunts %>%
+arrange(session)
+unique(all_hunts$session)
+ah <- all_hunts %>%
+arrange(session)
+unique(ah$session)
+ah
+unique(ah$session)
+ah_sessions <- unique(ah$session)
+seq_along(ah_sessions)
+ah %>% filter(session)
+ah %>% filter(session <= ah_sessions[1])
+unique(
+ah %>% filter(session <= ah_sessions[1])
+)$session
+unique(
+(ah %>% filter(session <= ah_sessions[1]))
+)$session
+unique((
+ah %>% filter(session <= ah_sessions[1])
+)$session
+)
+unique((
+ah %>% filter(session <= ah_sessions[2])
+)$session
+)
+unique((
+ah %>% filter(session <= ah_sessions[3])
+)$session
+)
+unique((
+ah %>% filter(session <= ah_sessions[11])
+)$session
+)
+unique((
+ah %>% filter(session <= ah_sessions[10])
+)$session
+)
+seq_along(ah_sessions)
+unique((
+ah %>% filter(session <= ah_sessions[2])
+)$session
+)
+for (i in seq_along(ah_sessions) ) {
+tmp_ah <- ah %>% filter(session <= ah_sessions[i])
+}
+tmp_ah
+for (i in seq_along(ah_sessions) ) {
+tmp_ah <- ah %>% filter(session <= ah_sessions[i])
+list_area[[i]] <- tmp_ah
+}
+list_area <- list()
+for (i in seq_along(ah_sessions) ) {
+tmp_ah <- ah %>% filter(session <= ah_sessions[i])
+list_area[[i]] <- tmp_ah
+}
+list_area
+list_mcp <- list()
+list_kde <- list()
+for (i in seq_along(ah_sessions) ) {
+tmp_ah <- ah %>% filter(session <= ah_sessions[i])
+pour_mcp <- tmp_ah
+pour_mcp_sp <- data.frame(as.character(pour_mcp$village))
+colnames(pour_mcp_sp) <- "village"
+coordinates(pour_mcp_sp) <- pour_mcp[,c("longitude", "latitude")]
+proj4string(pour_mcp_sp) <- CRS('+init=epsg:4326')  ## WGS 84 code
+pour_mcp_sp <- spTransform(pour_mcp_sp, CRS('+init=epsg:32633')) # Covert to UTM
+#make it as an sf and covert to WGS84
+all_village_mcp <- st_as_sf(mcp(pour_mcp_sp, percent=100, unin=c("m"), unout=c("km2")))
+all_village_mcp <- st_transform(all_village_mcp, 4326)
+#make your kde in sf and WGS84 at 95% (i.e., capturing 95% of the points)
+#earlier play has showed me 95% is most representative..
+##...of what the hunting zone looks/feels like in 'reality'
+pour_kde_sp <- pour_mcp_sp
+kd <- kernelUD(pour_kde_sp, h="href", extent=1.5, grid=500, same4all=FALSE)
+all_village_kde <- st_as_sf(getverticeshr(kd, percent=95, unin= "m", unout="km2"))
+all_village_kde <- st_transform(all_village_kde, 4326)
+list_mcp[[i]] <- all_village_mcp
+list_mcp[[i]] <- all_village_kde
+}
+library(adehabitatHR)
+library(adehabitatHR)
+library(ctmm)
+library(dplyr)
+library(geosphere)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(leaflet)
+library(leaflet.extras)
+library(mapdata)
+library(maps)
+#for the cartography data
+install.packages("adehabitatHR")
+install.packages("ctmm")
+#install.packages("dplyr")
+install.packages("geosphere")
+#install.packages("ggplot2")
+install.packages("gridExtra")
+#install.packages("grid") #for adding title to grid.arrange..base package that should not be updated?
+install.packages("knitr")
+install.packages("leaflet")
+install.packages("leaflet.extras")
+install.packages("mapdata")
+install.packages("maps")
+install.packages("maptools")
+install.packages("mapview")
+install.packages("momentuHMM")

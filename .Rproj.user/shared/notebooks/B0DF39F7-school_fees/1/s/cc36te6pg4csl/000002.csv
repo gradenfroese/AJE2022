@@ -1,0 +1,227 @@
+"0","##get meta"
+"0",""
+"0","species_meta <- readRDS(""..//inputs/meta/species_meta_traits.rds"")"
+"0",""
+"0","village_meta <- read_csv(""..//inputs/meta/project_villages.csv"","
+"0","                         locale = readr::locale(encoding = ""latin1""))  %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m20[34m[39m [1m[1mColumns: [1m[22m[34m[34m8[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m (6): village, ethnicity, type, gestion_s14, post_med, post_last
+[32mdbl[39m (2): longitude, latitude
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","work_days <- read_csv(""..//inputs/meta/work_days_months.csv"","
+"0","                      locale = readr::locale(encoding = ""latin1"")) %>%"
+"0","  mutate_if(is.character,funs(factor(.))) %>%"
+"0","  filter(session < 15)"
+"1","[1m[1mRows: [1m[22m[34m[34m215[34m[39m [1m[1mColumns: [1m[22m[34m[34m6[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m (5): date, session_month, session_month_english, session_year, year_short
+[32mdbl[39m (1): session
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","work_days$date <- dmy(work_days$date)"
+"0",""
+"0","kde95 <- read_csv(""..//inputs/cartography/kde95_26.04.20.csv"")  %>% "
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m9[34m[39m [1m[1mColumns: [1m[22m[34m[34m3[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m (1): village
+[32mdbl[39m (2): kde95, gps_hunts
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","phunter_meta <- readRDS(""..//inputs/meta/phunter_meta.rds"")"
+"0",""
+"0","#get data"
+"0","#QC as follows (see data_issues.csv in metadata)"
+"0","#village C8 all bushmeat cut"
+"0","#C2 <= bushmeat session 2 cut"
+"0","#E4 <= bushmeat session 12 cut (carto<= session 8)"
+"0","#E10 <= bushmeat session 12 cut (carto<= session 12)"
+"0","#E2 cut all cartography"
+"0","#session 15 shortened by covid, cut from main analyses"
+"0",""
+"0","p2_bushmeat <- read_csv(""..//inputs/transects/bushmeat_transects.csv"") %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m7917[34m[39m [1m[1mColumns: [1m[22m[34m[34m20[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m  (14): villageday, village, species, state, location, sex, obtained, how_obtained, where_obtained, use, how_killed, when_kille...
+[32mdbl[39m   (4): session, number, price, km
+[34mdate[39m  (1): date
+[34mtime[39m  (1): time
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","p2_offtake <- read_csv(""..//inputs/transects/offtake_transects.csv"") %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m7313[34m[39m [1m[1mColumns: [1m[22m[34m[34m5[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m  (3): village, villageday, species
+[32mdbl[39m  (1): session
+[34mdate[39m (1): date
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","p2_bushmeat_FR <- read_csv(""..//inputs/transects/bushmeat_transects_FR.csv"") %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m7917[34m[39m [1m[1mColumns: [1m[22m[34m[34m20[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m  (15): uniqueID, village, date, especes, etat, endroit, sex, obtenu via, obtenu comment, obtenu ou, but, tue via, tue quand, t...
+[32mdbl[39m   (4): session, nombre, prix, km
+[34mtime[39m  (1): heure
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","###get effort for p2 transects"
+"0",""
+"0","p2_eff <- read_csv(""..//inputs/transects/effort_transects.csv"")  %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m6893[34m[39m [1m[1mColumns: [1m[22m[34m[34m18[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m   (4): villageday, village, morning_afternoon, weather
+[32mdbl[39m  (11): session, homes_entered, homes_unentered, homes_empty, homes_total, homes_prop, homes_normal, homes_diff, walk_mins, avg...
+[34mdate[39m  (1): date
+[34mtime[39m  (2): time_start, time_end
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","p2_eff_FR <- read_csv(""..//inputs/transects/effort_transects_FR.csv"")  %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m7060[34m[39m [1m[1mColumns: [1m[22m[34m[34m18[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m   (4): uniqueID, village, matin/soir, temps
+[32mdbl[39m  (11): session, ME, MPE, MV, M, M_prop, normal_M, diff_M, walk_mins, avg_walk, walk_diff
+[34mdate[39m  (1): date
+[34mtime[39m  (2): heure debut, heure fin
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","##cartography"
+"0","carto_huntmeat <- read_csv(""..//inputs/cartography/huntmeat.csv"") %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m1333[34m[39m [1m[1mColumns: [1m[22m[34m[34m18[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m (13): hunt, villageday, date_hunted, species, state, sex, use, where_sold, who_sold, how_killed, when_killed, habitat, side_road
+[32mdbl[39m  (5): number, lb, kg, price, km
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","carto_huntmeat_full <- carto_huntmeat"
+"0",""
+"0","carto_hunter_responses <- read_csv(""..//inputs/cartography/hunter_responses.csv"") %>%"
+"0","  filter(guntrap != ""neither"")   %>%"
+"0","  mutate_if(is.character,funs(factor(.)))"
+"1","[1m[1mRows: [1m[22m[34m[34m912[34m[39m [1m[1mColumns: [1m[22m[34m[34m66[34m[39m
+"
+"1","[36m──[39m [1m[1mColumn specification[1m[22m [36m──────────────────────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m  (33): hunt, village, hunter, gps, gunhunt, traphunt, guntrap, why_hunt, command, command_details, nightday, camp, camp_detail...
+[32mdbl[39m  (26): session, partie, month, duration, max_km, double_zero_before, chevrotine_before, smalls_before, total_ammo_before, n_da...
+[34mdttm[39m  (2): start_datetime, end_datetime
+[34mdate[39m  (3): entered, start_date, end_date
+[34mtime[39m  (2): time_depart, time_return
+"
+"1","
+[36mℹ[39m Use [38;5;251m[48;5;235m[38;5;251m[48;5;235m`spec()`[48;5;235m[38;5;251m[49m[39m to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set [38;5;251m[48;5;235m[38;5;251m[48;5;235m`show_col_types = FALSE`[48;5;235m[38;5;251m[49m[39m to quiet this message.
+"
+"0","tmp_join <- carto_hunter_responses %>%"
+"0","  select(hunt,village,entered,session)"
+"0",""
+"0","carto_huntmeat <- left_join(carto_huntmeat,tmp_join, by = ""hunt"") %>%"
+"0","  mutate_if(is.character,funs(factor(.))) %>%"
+"0","  select(villageday,village,"
+"0","         date = entered,"
+"0","         species,state,number,use,session)"
+"0",""
+"0","##carto input for bayes"
+"0",""
+"0","gun_in <- readRDS(""..//inputs/cartography/derived/bayes_hunts_inputs_gun.rds"")"
+"0","trap_in <- readRDS(""..//inputs/cartography/derived/bayes_hunts_inputs_trap.rds"")"
+"0",""
+"0","all_in <- bind_rows("
+"0","gun_in %>% "
+"0","  filter(guntrap != ""both"") ,"
+"0","trap_in"
+"0",")"
+"0",""
+"0","table(all_in$guntrap)"
+"1","
+"
+"1","   both "
+"1","    gun "
+"1","neither "
+"1","   trap "
+"1","
+"
+"1","    233 "
+"1","    479 "
+"1","      0 "
+"1","    198 "
+"1","
+"
+"0","table(all_in$spatial_data)"
+"1","
+"
+"1"," no "
+"1","yes "
+"1","
+"
+"1","108 "
+"1","802 "
+"1","
+"
+"0","huntcount <- left_join("
+"0","all_in %>% "
+"0","  group_by(village) %>% "
+"0","  filter(spatial_data == ""yes"") %>% "
+"0","  dplyr::summarize(input_gps_hunts = n()),"
+"0","kde95) "
+"1","Joining, by = ""village""
+"
+"0","huntcount <- huntcount %>% "
+"0","  select(village,"
+"0","         gps_hunts, "
+"0","         input_gps_hunts,"
+"0","         kde95) "
+"0",""
